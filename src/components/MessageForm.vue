@@ -2,47 +2,66 @@
   <div class="custom-background">
     <h1>Message</h1>
     <div class="select-platform-and-sender">
-      <label>Select platform: </label>
-      <select class="custom-select" v-model="selectedPlatform">
-        <option v-for="platform in platforms" :key="platform" :value="platform">
-          {{ platform }}
-        </option>
-      </select>
+      <div class="select-box">
+        <label>Platform: </label>
+        <select class="custom-select" v-model="selectedPlatform">
+          <option disabled selected value="">Choose one platform</option>
+          <option
+            v-for="platform in platforms"
+            :key="platform"
+            :value="platform"
+          >
+            {{ platform }}
+          </option>
+        </select>
+      </div>
 
-      <label> Select User: </label>
-      <select class="custom-select" v-model="selectedSender">
-        <option
-          v-for="sender in filterSendersByPlatforms"
-          :key="sender"
-          :value="sender"
-        >
-          {{ sender }}
-        </option>
-      </select>
+      <div class="select-box">
+        <label> User: </label>
+        <select class="custom-select" v-model="selectedSender">
+          <option disabled selected value="">Choose one user</option>
+          <option
+            v-for="sender in filterSendersByPlatforms"
+            :key="sender"
+            :value="sender"
+          >
+            {{ sender }}
+          </option>
+        </select>
+      </div>
     </div>
+
     <div class="receiver-url">
-      <label>Receiver URL: </label>
-      <input
+      <label><h3>URL:</h3></label>
+      <textarea
         class="custom-textbox"
         type="text"
-        :value="receiverURL"
+        v-mode="receiverURL"
         placeholder="ReceiverURL"
-      />
+      ></textarea>
     </div>
+
     <div class="message">
       <h3>Message</h3>
       <div class="select-template">
-        <select class="custom-select" v-model="selectedTemplate">
-          <option
-            v-for="template in templates"
-            :key="template"
-            :value="template"
-          >
-            {{ template }}
-          </option>
-        </select>
+        <div class="item">
+          <select class="custom-select" v-model="selectedTemplate">
+            <option disabled selected value="">Choose one template</option>
+            <option
+              v-for="template in templates"
+              :key="template"
+              :value="template"
+            >
+              {{ template }}
+            </option>
+          </select>
+        </div>
 
-        <button @click="createAndEditTemplate">Create and Edit Template</button>
+        <div class="item">
+          <button class="create-template" @click="createAndEditTemplate">
+            Create and Edit Template
+          </button>
+        </div>
       </div>
       <div class="message-box">
         <textarea
@@ -53,7 +72,7 @@
       </div>
     </div>
 
-    <h4>Target Settings</h4>
+    <h3>Target Settings</h3>
     <div class="checkbox-message">
       <label>
         <input type="checkbox" v-model="targetSettings.changedPosition" />
@@ -71,8 +90,8 @@
 
     <button @click="preview">Preview and Send</button>
 
-    <div v-if="showPreviewModel" class="model">
-      <div class="model-content">
+    <div v-if="showPreviewModel" class="popup">
+      <div class="popup-content">
         <span class="close" @click="closeModel">&times;</span>
         <h3>Preview</h3>
         <p>{{ previewData }}</p>
@@ -118,7 +137,7 @@ export default {
       alreadyConnected: "Do not send to people you've already connected with",
       followCandidate: "Follow candidate when sending invite message",
     };
-    const previewData = ref('');
+    const previewData = ref("");
     const showPreviewModel = ref(false);
     const preview = () => {
       const previewModel = {
@@ -134,7 +153,7 @@ export default {
     };
     const closeModel = () => {
       showPreviewModel.value = false;
-    }
+    };
     const send = () => {
       const sendMessage = {
         platform: selectedPlatform,
@@ -152,7 +171,8 @@ export default {
       targetSettings.alreadyConnected = false;
       targetSettings.changedPosition = false;
       targetSettings.followCandidate = false;
-    }
+      showPreviewModel.value = false;
+    };
 
     return {
       platforms,
@@ -182,12 +202,91 @@ export default {
   display: flex;
   flex-direction: column;
 }
-.custom-select {
-  width: 35%;
-  height: 30px;
-}
+
 .custom-textbox {
   width: 90%;
   height: 100px;
+}
+
+.message {
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+::placeholder {
+  color: #999; /* Định dạng màu cho chữ placeholder, ví dụ: xám nhạt (#999) */
+}
+
+.receiver-url {
+  display: flex;
+  flex-direction: column;
+  margin-top: 10px;
+  margin-bottom:10px;
+}
+
+.select-platform-and-sender {
+  display: flex;
+  margin-top: 10px;
+  margin-bottom:10px;
+}
+
+.select-platform-and-sender .custom-select {
+  width: 60%;
+  height: 30px;
+}
+
+.select-template {
+  display: flex;
+  margin-top: 10px;
+  margin-bottom:10px;
+}
+
+.select-template .item {
+  flex: 1;
+}
+
+.select-template .custom-select {
+  width: 60%;
+  height: 30px;
+}
+
+.select-template .create-template {
+  height: 30px;
+  align-items: center;
+  display: flex;
+}
+
+.select-box {
+  width: 50%;
+  display: flex;
+  flex-direction: column;
+}
+
+.popup {
+  display: none; /* Mặc định ẩn popup */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5); /* Hiệu ứng mờ nền */
+}
+
+.popup-content {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: white;
+  padding: 20px;
+  border-radius: 5px;
+}
+
+.close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 20px;
+  cursor: pointer;
 }
 </style>
