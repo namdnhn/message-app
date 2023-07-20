@@ -23,6 +23,8 @@ a,
 
 @media (min-width: 1024px) {
   body {
+    background-color: white;
+    color: black;
     display: flex;
     place-items: center;
   }
