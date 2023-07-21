@@ -101,99 +101,142 @@
   </div>
 </template>
 
-<script lang="ts">
-import { computed, reactive, ref } from "vue";
+<script lang="ts" setup>
+import axios from "axios";
+import { computed, onMounted, reactive, type Ref, ref } from "vue";
 
-export default {
-  setup() {
-    const platforms = ref(["Linkedin", "Facebook", "Zalo"]);
-    const selectedPlatform = ref("");
+// chọn platform
+const platforms = ref([]);
+onMounted(async () => {
+  try {
+    const response = await axios.get("http://localhost:8000/platforms");
+    platforms.value = response.data;
+  } catch (error) {
+    console.error("Failed to fetch platforms:", error);
+  }
+});
+const selectedPlatform = ref("");
 
-    const senders = reactive<Record<string, string[]>>({
-      Linkedin: ["Nguyen Van A", "Nguyen Van D"],
-      Facebook: ["Nguyen Van B"],
-      Zalo: ["Nguyen Van C"],
-    });
-    const selectedSender = ref("");
-    const filterSendersByPlatforms = computed(() => {
-      return senders[selectedPlatform.value] || [];
-    });
+// chọn sender
+interface SendersData {
+  [key: string]: string[];
+}
 
-    const templates = ref(["template1", "template2"]);
-    const selectedTemplate = ref("");
-    const createAndEditTemplate = () => {};
+const senders: Ref<SendersData> = ref({});
 
-    const receiverURL = ref("");
-    const message = ref("");
+const selectedSender = ref("");
 
-    const targetSettings = reactive({
-      changedPosition: false,
-      alreadyConnected: false,
-      followCandidate: false,
-    });
-    const targetSettingsMessages = {
-      changedPosition:
-        "Do not send message if current company or position is changed",
-      alreadyConnected: "Do not send to people you've already connected with",
-      followCandidate: "Follow candidate when sending invite message",
-    };
-    const previewData = ref("");
-    const showPreviewModel = ref(false);
-    const preview = () => {
-      const previewModel = {
-        platform: selectedPlatform,
-        sender: selectedSender,
-        receiverURL: receiverURL,
-        template: selectedTemplate,
-        message: message,
-        targetSettings: targetSettings,
-      };
-      previewData.value = JSON.stringify(previewModel);
-      showPreviewModel.value = true;
-    };
-    const closeModel = () => {
-      showPreviewModel.value = false;
-    };
-    const send = () => {
-      const sendMessage = {
-        platform: selectedPlatform,
-        sender: selectedSender,
-        receiverURL: receiverURL,
-        template: selectedTemplate,
-        message: message,
-        targetSettings: targetSettings,
-      };
-      selectedPlatform.value = "";
-      selectedSender.value = "";
-      receiverURL.value = "";
-      selectedTemplate.value = "";
-      message.value = "";
-      targetSettings.alreadyConnected = false;
-      targetSettings.changedPosition = false;
-      targetSettings.followCandidate = false;
-      showPreviewModel.value = false;
-    };
+const filterSendersByPlatforms = computed(() => {
+  return senders.value[selectedPlatform.value] || []; // Sử dụng senders.value thay vì senders
+});
 
-    return {
-      platforms,
-      senders,
-      templates,
-      selectedPlatform,
-      selectedSender,
-      receiverURL,
-      selectedTemplate,
-      message,
-      targetSettings,
-      targetSettingsMessages,
-      showPreviewModel,
-      previewData,
-      filterSendersByPlatforms,
-      createAndEditTemplate,
-      preview,
-      closeModel,
-      send,
-    };
-  },
+onMounted(async () => {
+  try {
+    const response = await axios.get("http://localhost:8000/senders");
+    senders.value = response.data; // Gán dữ liệu trực tiếp cho senders.value
+  } catch (error) {
+    console.error("Failed to fetch senders:", error);
+  }
+});
+
+// chọn template
+const templates = ref(["template1", "template2"]);
+onMounted(async () => {
+  try {
+    const response = await axios.get("http://localhost:8000/templates");
+    templates.value = response.data; // Gán dữ liệu trực tiếp cho senders.value
+  } catch (error) {
+    console.error("Failed to fetch templates:", error);
+  }
+});
+const selectedTemplate = ref("");
+const createAndEditTemplate = () => {};
+
+// nhập receiver URL và message
+const receiverURL = ref("");
+const message = ref("");
+
+// box target setting
+const targetSettings = reactive({
+  changedPosition: false,
+  alreadyConnected: false,
+  followCandidate: false,
+});
+const targetSettingsMessages = {
+  changedPosition:
+    "Do not send message if current company or position is changed",
+  alreadyConnected: "Do not send to people you've already connected with",
+  followCandidate: "Follow candidate when sending invite message",
+};
+
+// xem preview
+const previewData = ref("");
+const showPreviewModel = ref(false);
+const preview = () => {
+  const previewModel = {
+    platform: selectedPlatform,
+    sender: selectedSender,
+    receiverURL: receiverURL,
+    template: selectedTemplate,
+    message: message,
+    targetSettings: targetSettings,
+  };
+  previewData.value = JSON.stringify(previewModel);
+  showPreviewModel.value = true;
+};
+const closeModel = () => {
+  showPreviewModel.value = false;
+};
+
+// post
+// const send = () => {
+//   const sendMessage = {
+//     platform: selectedPlatform,
+//     sender: selectedSender,
+//     receiverURL: receiverURL,
+//     template: selectedTemplate,
+//     message: message,
+//     targetSettings: targetSettings,
+//   };
+//   selectedPlatform.value = "";
+//   selectedSender.value = "";
+//   receiverURL.value = "";
+//   selectedTemplate.value = "";
+//   message.value = "";
+//   targetSettings.alreadyConnected = false;
+//   targetSettings.changedPosition = false;
+//   targetSettings.followCandidate = false;
+//   showPreviewModel.value = false;
+// };
+
+const send = async () => {
+  const sendMessage = {
+    platform: selectedPlatform.value,
+    sender: selectedSender.value,
+    receiverURL: receiverURL.value,
+    template: selectedTemplate.value,
+    message: message.value,
+    targetSettings: targetSettings,
+  };
+
+  try {
+    // Gọi API endpoint bằng Axios để gửi thông tin message
+    const response = await axios.post("http://localhost:8000/send-message/", sendMessage);
+    console.log(response.data.message); // Hiển thị response từ backend
+  } catch (error) {
+    console.error("Failed to send message:", error);
+  }
+
+  // Đặt giá trị các biến về mặc định sau khi gửi
+  selectedPlatform.value = "";
+  selectedSender.value = "";
+  receiverURL.value = "";
+  selectedTemplate.value = "";
+  message.value = "";
+  targetSettings.alreadyConnected = false;
+  targetSettings.changedPosition = false;
+  targetSettings.followCandidate = false;
+  showPreviewModel.value = false;
 };
 </script>
 
@@ -221,13 +264,13 @@ export default {
   display: flex;
   flex-direction: column;
   margin-top: 10px;
-  margin-bottom:10px;
+  margin-bottom: 10px;
 }
 
 .select-platform-and-sender {
   display: flex;
   margin-top: 10px;
-  margin-bottom:10px;
+  margin-bottom: 10px;
 }
 
 .select-platform-and-sender .custom-select {
@@ -238,7 +281,7 @@ export default {
 .select-template {
   display: flex;
   margin-top: 10px;
-  margin-bottom:10px;
+  margin-bottom: 10px;
 }
 
 .select-template .item {
