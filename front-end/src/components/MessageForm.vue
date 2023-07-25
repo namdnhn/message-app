@@ -94,7 +94,19 @@
       <div class="popup-content">
         <span class="close" @click="closeModel">&times;</span>
         <h3>Preview</h3>
-        <p>{{ previewData }}</p>
+        <p>Platform: {{ previewData.platform }}</p>
+        <p>Sender: {{ previewData.sender }}</p>
+        <p>Receiver URL: {{ previewData.receiverURL }}</p>
+        <p>Template: {{ previewData.template }}</p>
+        <p>Message: {{ previewData.message }}</p>
+        <p>Choosen target setting:</p>
+        <li
+          v-for="message in previewData.targetSettings"
+          :key="message"
+          :value="message"
+        >
+          {{ message }}
+        </li>
         <button @click="send">Send</button>
       </div>
     </div>
@@ -170,21 +182,50 @@ const targetSettingsMessages = {
 };
 
 // xem preview
-const previewData = ref("");
+const previewData = ref({
+  platform: "",
+  sender: "",
+  receiverURL: "",
+  template: "",
+  message: "",
+  targetSettings: [""],
+});
 const showPreviewModel = ref(false);
 const preview = () => {
-  const previewModel = {
-    platform: selectedPlatform,
-    sender: selectedSender,
-    receiverURL: receiverURL,
-    template: selectedTemplate,
-    message: message,
-    targetSettings: targetSettings,
-  };
-  previewData.value = JSON.stringify(previewModel);
+  previewData.value.platform = selectedPlatform.value;
+  previewData.value.sender = selectedSender.value;
+  previewData.value.receiverURL = receiverURL.value;
+  previewData.value.template = selectedTemplate.value;
+  previewData.value.message = message.value;
+
+  if (
+    !targetSettings.alreadyConnected &&
+    !targetSettings.changedPosition &&
+    !targetSettings.followCandidate
+  ) {
+    previewData.value.targetSettings.push("Not selected");
+  } else {
+    if (targetSettings.alreadyConnected) {
+      previewData.value.targetSettings.push(
+        targetSettingsMessages.alreadyConnected
+      );
+    }
+    if (targetSettings.changedPosition) {
+      previewData.value.targetSettings.push(
+        targetSettingsMessages.changedPosition
+      );
+    }
+    if (targetSettings.followCandidate) {
+      previewData.value.targetSettings.push(
+        targetSettingsMessages.followCandidate
+      );
+    }
+  }
+
   showPreviewModel.value = true;
 };
 const closeModel = () => {
+  previewData.value.targetSettings.splice(0, previewData.value.targetSettings.length);
   showPreviewModel.value = false;
 };
 
@@ -221,7 +262,10 @@ const send = async () => {
 
   try {
     // Gọi API endpoint bằng Axios để gửi thông tin message
-    const response = await axios.post("http://localhost:8000/send-message/", sendMessage);
+    const response = await axios.post(
+      "http://localhost:8000/send-message/",
+      sendMessage
+    );
     console.log(response.data.message); // Hiển thị response từ backend
   } catch (error) {
     console.error("Failed to send message:", error);
@@ -306,22 +350,28 @@ const send = async () => {
 }
 
 .popup {
+  display: flex;
+  justify-content: center;
+  align-items: center;
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.5); /* Hiệu ứng mờ nền */
+  background-color: rgba(0, 0, 0, 0.5); /* Màu nền xám mờ */
+  z-index: 9999;
 }
 
 .popup-content {
+  width: 50%;
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   background-color: white;
   padding: 20px;
-  border-radius: 5px;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
 }
 
 .close {
@@ -330,5 +380,23 @@ const send = async () => {
   right: 10px;
   font-size: 20px;
   cursor: pointer;
+}
+
+h3 {
+  margin-top: 0;
+}
+
+p {
+  margin: 5px 0;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+  margin: 5px 0;
+}
+
+li {
+  margin: 3px 0;
 }
 </style>
