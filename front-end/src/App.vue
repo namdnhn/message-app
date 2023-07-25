@@ -4,16 +4,11 @@
   </main>
 </template>
 
-<script lang="ts">
+<script lang='ts' setup>
 import MessageForm from './components/MessageForm.vue';
 
-export default {
-  name: "App",
-  components: {
-    MessageForm
-  }
-};
-
+const name = "App";
+const components = { MessageForm };
 </script>
 
 <style scoped>

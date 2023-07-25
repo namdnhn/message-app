@@ -140,7 +140,7 @@ onMounted(async () => {
 });
 
 // chọn template
-const templates = ref(["template1", "template2"]);
+const templates = ref([]);
 onMounted(async () => {
   try {
     const response = await axios.get("http://localhost:8000/templates");
@@ -306,7 +306,6 @@ const send = async () => {
 }
 
 .popup {
-  display: none; /* Mặc định ẩn popup */
   position: fixed;
   top: 0;
   left: 0;
