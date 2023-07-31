@@ -8,10 +8,10 @@
           <option disabled selected value="">Choose one platform</option>
           <option
             v-for="platform in platforms"
-            :key="platform"
+            :key="platform.id"
             :value="platform"
           >
-            {{ platform }}
+            {{ platform.name }}
           </option>
         </select>
       </div>
@@ -22,10 +22,10 @@
           <option disabled selected value="">Choose one user</option>
           <option
             v-for="sender in filterSendersByPlatforms"
-            :key="sender"
+            :key="sender.id"
             :value="sender"
           >
-            {{ sender }}
+            {{ sender.name }}
           </option>
         </select>
       </div>
@@ -35,9 +35,8 @@
       <label><h3>URL:</h3></label>
       <textarea
         class="custom-textbox"
-        type="text"
-        v-mode="receiverURL"
-        placeholder="ReceiverURL"
+        v-model="urlReceiver"
+        placeholder="Receiver's URL"
       ></textarea>
     </div>
 
@@ -46,13 +45,13 @@
       <div class="select-template">
         <div class="item">
           <select class="custom-select" v-model="selectedTemplate">
-            <option disabled selected value="">Choose one template</option>
+            <option disabled selected value="undefined">Choose one template</option>
             <option
               v-for="template in templates"
-              :key="template"
-              :value="template"
+              :key="template.id"
+              :value="template.name"
             >
-              {{ template }}
+              {{ template.name }}
             </option>
           </select>
         </div>
@@ -67,6 +66,7 @@
         <textarea
           class="custom-textbox"
           v-model="message"
+          ref="sampleMessage"
           placeholder="Message"
         ></textarea>
       </div>
@@ -96,8 +96,7 @@
         <h3>Preview</h3>
         <p>Platform: {{ previewData.platform }}</p>
         <p>Sender: {{ previewData.sender }}</p>
-        <p>Receiver URL: {{ previewData.receiverURL }}</p>
-        <p>Template: {{ previewData.template }}</p>
+        <p>Receiver URL: {{ previewData.urlReceiver }}</p>
         <p>Message: {{ previewData.message }}</p>
         <p>Choosen target setting:</p>
         <li
@@ -118,7 +117,11 @@ import axios from "axios";
 import { computed, onMounted, reactive, type Ref, ref } from "vue";
 
 // chọn platform
-const platforms = ref([]);
+interface Platform {
+  id: number,
+  name: string
+}
+const platforms = ref<Platform[]>();
 onMounted(async () => {
   try {
     const response = await axios.get("http://localhost:8000/platforms");
@@ -127,45 +130,61 @@ onMounted(async () => {
     console.error("Failed to fetch platforms:", error);
   }
 });
-const selectedPlatform = ref("");
+const selectedPlatform = ref<Platform>();
 
 // chọn sender
+interface Sender {
+  id: number,
+  name: string,
+  platform: number,
+}
+
 interface SendersData {
-  [key: string]: string[];
+  [key: number]: Sender[];
 }
 
 const senders: Ref<SendersData> = ref({});
 
-const selectedSender = ref("");
-
-const filterSendersByPlatforms = computed(() => {
-  return senders.value[selectedPlatform.value] || []; // Sử dụng senders.value thay vì senders
-});
+const selectedSender = ref<Sender>();
 
 onMounted(async () => {
   try {
     const response = await axios.get("http://localhost:8000/senders");
-    senders.value = response.data; // Gán dữ liệu trực tiếp cho senders.value
+    senders.value = response.data;
   } catch (error) {
     console.error("Failed to fetch senders:", error);
   }
 });
 
+const filterSendersByPlatforms = computed(() => {
+  if (selectedPlatform.value) {
+    return senders.value[selectedPlatform.value.id];
+  } else {
+    return [];
+  }
+});
+
 // chọn template
-const templates = ref([]);
+interface Template {
+  id: number,
+  name: string,
+  template: string,
+}
+
+const templates = ref<Template[]>();
 onMounted(async () => {
   try {
-    const response = await axios.get("http://localhost:8000/templates");
-    templates.value = response.data; // Gán dữ liệu trực tiếp cho senders.value
+    const response = await axios.get<Template[]>("http://localhost:8000/templates");
+    templates.value = response.data
   } catch (error) {
     console.error("Failed to fetch templates:", error);
   }
 });
-const selectedTemplate = ref("");
+const selectedTemplate: Ref<Template | undefined> = ref(undefined);
 const createAndEditTemplate = () => {};
 
 // nhập receiver URL và message
-const receiverURL = ref("");
+const urlReceiver = ref("");
 const message = ref("");
 
 // box target setting
@@ -182,20 +201,36 @@ const targetSettingsMessages = {
 };
 
 // xem preview
-const previewData = ref({
+interface PreviewData {
+  platform: string;
+  sender: string;
+  urlReceiver: string;
+  message: string;
+  targetSettings: string[];
+}
+
+const previewData: Ref<PreviewData> = ref({
   platform: "",
   sender: "",
-  receiverURL: "",
-  template: "",
+  urlReceiver: "",
   message: "",
-  targetSettings: [""],
+  targetSettings: [],
 });
 const showPreviewModel = ref(false);
 const preview = () => {
-  previewData.value.platform = selectedPlatform.value;
-  previewData.value.sender = selectedSender.value;
-  previewData.value.receiverURL = receiverURL.value;
-  previewData.value.template = selectedTemplate.value;
+  if(selectedPlatform.value)
+    previewData.value.platform = selectedPlatform.value.name;
+  else
+    previewData.value.platform = "Nothing";
+  if(selectedSender.value)
+    previewData.value.sender = selectedSender.value.name;
+  else
+    previewData.value.sender = "Nothing";
+  if(urlReceiver.value == "")
+    previewData.value.urlReceiver = "Nothing";
+  else
+    previewData.value.urlReceiver = urlReceiver.value;
+    
   previewData.value.message = message.value;
 
   if (
@@ -230,34 +265,25 @@ const closeModel = () => {
 };
 
 // post
-// const send = () => {
-//   const sendMessage = {
-//     platform: selectedPlatform,
-//     sender: selectedSender,
-//     receiverURL: receiverURL,
-//     template: selectedTemplate,
-//     message: message,
-//     targetSettings: targetSettings,
-//   };
-//   selectedPlatform.value = "";
-//   selectedSender.value = "";
-//   receiverURL.value = "";
-//   selectedTemplate.value = "";
-//   message.value = "";
-//   targetSettings.alreadyConnected = false;
-//   targetSettings.changedPosition = false;
-//   targetSettings.followCandidate = false;
-//   showPreviewModel.value = false;
-// };
+interface Message {
+  platform: number | undefined;
+  receiver: number | undefined;
+  urlReceiver: string;
+  messageContent: string;
+  alreadyConnected: boolean;
+  changePosition: boolean;
+  followCandidate: boolean;
+}
 
 const send = async () => {
-  const sendMessage = {
-    platform: selectedPlatform.value,
-    sender: selectedSender.value,
-    receiverURL: receiverURL.value,
-    template: selectedTemplate.value,
-    message: message.value,
-    targetSettings: targetSettings,
+  const sendMessage : Message = {
+    platform: selectedPlatform.value?.id,
+    receiver: selectedSender.value?.id,
+    urlReceiver: urlReceiver.value,
+    messageContent: message.value,
+    alreadyConnected: targetSettings.alreadyConnected,
+    changePosition: targetSettings.changedPosition,
+    followCandidate: targetSettings.followCandidate,
   };
 
   try {
@@ -272,14 +298,15 @@ const send = async () => {
   }
 
   // Đặt giá trị các biến về mặc định sau khi gửi
-  selectedPlatform.value = "";
-  selectedSender.value = "";
-  receiverURL.value = "";
-  selectedTemplate.value = "";
+  selectedPlatform.value = undefined;
+  selectedSender.value = undefined;
+  urlReceiver.value = "";
+  selectedTemplate.value = undefined;
   message.value = "";
   targetSettings.alreadyConnected = false;
   targetSettings.changedPosition = false;
   targetSettings.followCandidate = false;
+  previewData.value.targetSettings.splice(0, previewData.value.targetSettings.length);
   showPreviewModel.value = false;
 };
 </script>
@@ -291,6 +318,7 @@ const send = async () => {
 }
 
 .custom-textbox {
+  resize: none;
   width: 90%;
   height: 100px;
 }

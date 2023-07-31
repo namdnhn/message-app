@@ -3,7 +3,6 @@ from fastapi import FastAPI
 from fastapi_camelcase import CamelModel
 
 class Message(CamelModel):
-    id: int
     platform: int
     receiver: int
     url_receiver: str
