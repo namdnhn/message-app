@@ -7,6 +7,7 @@ from models.platform import Platform
 from models.sender import Sender
 import asyncpg, logging
 
+
 app = FastAPI()
 
 app.add_middleware(
@@ -63,6 +64,7 @@ async def get_senders():
         except Exception as e:
             print(str(e))
             raise HTTPException(status_code=500, detail=str(e))
+
 
 
 @app.get("/templates", response_model=List[Template])
@@ -125,11 +127,12 @@ async def create_template(template: Template):
             print(str(e))
             raise HTTPException(status_code=500, detail=str(e))
 
-
+            
 @app.put("/edit-template/{template_id}")
 async def update_template(template_id: int, new_template: Template):
     async with app.state.pool.acquire() as connection:
         try:
+
             query = """UPDATE template
                        SET name = $1, template = $2
                        WHERE id = $3
@@ -146,9 +149,11 @@ async def update_template(template_id: int, new_template: Template):
             print(str(e))
             raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.post("/example")
 async def example_endpoint(request: Request):
     # Kiểm tra thông tin dữ liệu POST bằng cách gọi phương thức .json()
     post_data = await request.json()
     print("Data POST lên:", post_data)
     return {"message": "Dữ liệu đã được nhận và xử lý."}
+
