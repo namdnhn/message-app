@@ -1,6 +1,6 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Dict, List
+from typing import Dict, List, Tuple
 from models.template import Template
 from models.message import Message
 from models.platform import Platform
@@ -43,7 +43,7 @@ async def get_platforms():
     return platforms
 
 
-@app.get("/senders", response_model=Dict[Platform, List[Sender]])
+@app.get("/senders", response_model=Dict[int, List[Sender]])
 async def get_senders():
     async with app.state.pool.acquire() as connection:
         try:
@@ -55,10 +55,10 @@ async def get_senders():
             for row in rows:
                 platform = Platform(id=row["p_id"], name=row["p_name"])
                 sender = Sender(id=row["s_id"], name=row["s_name"], platform=row["s_platform"])
-                if platform not in result:
-                    result[platform] = [sender]
+                if (platform.id, platform.name) not in result:
+                    result[platform.id] = [sender]
                 else:
-                    result[platform].append(sender)
+                    result[platform.id].append(sender)
             return result
         except Exception as e:
             print(str(e))
@@ -98,7 +98,6 @@ async def send_message(message: Message):
             if not record:
                 raise HTTPException(status_code=500, detail="Failed to insert item.")
             return Message(
-                id=record["id"],
                 platform=record["platform"],
                 receiver=record["receiver"],
                 urlReceiver=record["url_receiver"],
@@ -146,3 +145,10 @@ async def update_template(template_id: int, new_template: Template):
         except Exception as e:
             print(str(e))
             raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/example")
+async def example_endpoint(request: Request):
+    # Kiểm tra thông tin dữ liệu POST bằng cách gọi phương thức .json()
+    post_data = await request.json()
+    print("Data POST lên:", post_data)
+    return {"message": "Dữ liệu đã được nhận và xử lý."}

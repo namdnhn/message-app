@@ -8,10 +8,10 @@
           <option disabled selected value="">Choose one platform</option>
           <option
             v-for="platform in platforms"
-            :key="platform"
+            :key="platform.id"
             :value="platform"
           >
-            {{ platform }}
+            {{ platform.name }}
           </option>
         </select>
       </div>
@@ -22,37 +22,36 @@
           <option disabled selected value="">Choose one user</option>
           <option
             v-for="sender in filterSendersByPlatforms"
-            :key="sender"
+            :key="sender.id"
             :value="sender"
           >
-            {{ sender }}
+            {{ sender.name }}
           </option>
         </select>
       </div>
     </div>
 
     <div class="receiver-url">
-      <label><h3>URL:</h3></label>
+      <label><h4>URL:</h4></label>
       <textarea
         class="custom-textbox"
-        type="text"
-        v-mode="receiverURL"
-        placeholder="ReceiverURL"
+        v-model="urlReceiver"
+        placeholder="Receiver's URL"
       ></textarea>
     </div>
 
     <div class="message">
-      <h3>Message</h3>
+      <h4>Message</h4>
       <div class="select-template">
         <div class="item">
           <select class="custom-select" v-model="selectedTemplate">
             <option disabled selected value="">Choose one template</option>
             <option
               v-for="template in templates"
-              :key="template"
-              :value="template"
+              :key="template.id"
+              :value="template.name"
             >
-              {{ template }}
+              {{ template.name }}
             </option>
           </select>
         </div>
@@ -72,7 +71,7 @@
       </div>
     </div>
 
-    <h3>Target Settings</h3>
+    <h4>Target Settings</h4>
     <div class="checkbox-message">
       <label>
         <input type="checkbox" v-model="targetSettings.changedPosition" />
@@ -96,8 +95,7 @@
         <h3>Preview</h3>
         <p>Platform: {{ previewData.platform }}</p>
         <p>Sender: {{ previewData.sender }}</p>
-        <p>Receiver URL: {{ previewData.receiverURL }}</p>
-        <p>Template: {{ previewData.template }}</p>
+        <p>Receiver URL: {{ previewData.urlReceiver }}</p>
         <p>Message: {{ previewData.message }}</p>
         <p>Choosen target setting:</p>
         <li
@@ -110,15 +108,64 @@
         <button @click="send">Send</button>
       </div>
     </div>
+
+    <div v-if="showCreateAndEditTemplate" class="popup">
+      <div class="popup-content">
+        <TabWrapper>
+          <Tab title="Create">
+            <span class="close" @click="closeTemplate">&times;</span>
+            <h3>Create Template</h3>
+            <li>Template name</li>
+            <input v-model="newTemplateName" class="custom-input" />
+            <li>Template content</li>
+            <textarea
+              v-model="newTemplateContent"
+              class="custom-textbox-template-content"
+            ></textarea>
+            <div><button @click="saveTemplate">Save</button></div>
+          </Tab>
+          <Tab title="Edit">
+            <span class="close" @click="closeTemplate">&times;</span>
+            <h3>Edit Template</h3>
+            <li>Choose Template</li>
+            <select class="custom-select" v-model="selectedTemplateToEdit">
+              <option
+                v-for="template in templates"
+                :key="template.id"
+                :value="template"
+              >
+                {{ template.name }}
+              </option>
+            </select>
+            <li>Template name</li>
+            <input v-model="editTemplateName" class="custom-input" />
+            <li>Template content</li>
+            <textarea
+              v-model="editTemplateContent"
+              class="custom-textbox-template-content"
+            ></textarea>
+            <div><button @click="editTemplate">Save</button></div>
+          </Tab>
+        </TabWrapper>
+      </div>
+    </div>
   </div>
 </template>
 
 <script lang="ts" setup>
 import axios from "axios";
-import { computed, onMounted, reactive, type Ref, ref } from "vue";
+import { computed, onMounted, reactive, type Ref, ref, watch } from "vue";
+import TabWrapper from "@/components/tab/TabWrapper.vue";
+import Tab from "@/components/tab/Tab.vue";
+
+const components = { Tab, TabWrapper };
 
 // chọn platform
-const platforms = ref([]);
+interface Platform {
+  id: number;
+  name: string;
+}
+const platforms = ref<Platform[]>();
 onMounted(async () => {
   try {
     const response = await axios.get("http://localhost:8000/platforms");
@@ -127,45 +174,127 @@ onMounted(async () => {
     console.error("Failed to fetch platforms:", error);
   }
 });
-const selectedPlatform = ref("");
+const selectedPlatform = ref<Platform>();
 
 // chọn sender
+interface Sender {
+  id: number;
+  name: string;
+  platform: number;
+}
+
 interface SendersData {
-  [key: string]: string[];
+  [key: number]: Sender[];
 }
 
 const senders: Ref<SendersData> = ref({});
 
-const selectedSender = ref("");
-
-const filterSendersByPlatforms = computed(() => {
-  return senders.value[selectedPlatform.value] || []; // Sử dụng senders.value thay vì senders
-});
+const selectedSender = ref<Sender>();
 
 onMounted(async () => {
   try {
     const response = await axios.get("http://localhost:8000/senders");
-    senders.value = response.data; // Gán dữ liệu trực tiếp cho senders.value
+    senders.value = response.data;
   } catch (error) {
     console.error("Failed to fetch senders:", error);
   }
 });
 
+const filterSendersByPlatforms = computed(() => {
+  if (selectedPlatform.value) {
+    return senders.value[selectedPlatform.value.id];
+  } else {
+    return [];
+  }
+});
+
 // chọn template
-const templates = ref([]);
+interface Template {
+  id: number;
+  name: string;
+  template: string;
+}
+
+const showCreateAndEditTemplate = ref(false);
+const templates = ref<Template[]>();
 onMounted(async () => {
   try {
-    const response = await axios.get("http://localhost:8000/templates");
-    templates.value = response.data; // Gán dữ liệu trực tiếp cho senders.value
+    const response = await axios.get<Template[]>(
+      "http://localhost:8000/templates"
+    );
+    templates.value = response.data;
   } catch (error) {
     console.error("Failed to fetch templates:", error);
   }
 });
-const selectedTemplate = ref("");
-const createAndEditTemplate = () => {};
+const selectedTemplate: Ref<Template | undefined> = ref(undefined);
+
+const createAndEditTemplate = () => {
+  showCreateAndEditTemplate.value = true;
+};
+const closeTemplate = () => {
+  showCreateAndEditTemplate.value = false;
+};
+
+// create Template
+const newTemplateName = ref("");
+const newTemplateContent = ref("");
+const saveTemplate = async () => {
+  const newTemplate: Template = {
+    id: 0,
+    name: newTemplateName.value,
+    template: newTemplateContent.value,
+  };
+  try {
+    // Gọi API endpoint bằng Axios để gửi thông tin message
+    const response = await axios.post(
+      "http://localhost:8000/create-template/",
+      newTemplate
+    );
+    console.log(response.data.message); // Hiển thị response từ backend
+  } catch (error) {
+    console.error("Failed to send message:", error);
+  }
+  newTemplateName.value = "";
+  newTemplateContent.value = "";
+  showCreateAndEditTemplate.value = false;
+};
+
+// edit Template
+const editTemplateName = ref("");
+const editTemplateContent = ref("");
+const selectedTemplateToEdit: Ref<Template | undefined> = ref(undefined);
+
+watch(selectedTemplateToEdit, (newValue, oldValue) => {
+  console.log(newValue);
+});
+const editTemplate = async () => {
+  const temp_id: number | undefined = selectedTemplateToEdit.value?.id;
+  console.log(temp_id);
+  if (temp_id != undefined) {
+    const newTemplate: Template = {
+      id: temp_id,
+      name: editTemplateName.value,
+      template: editTemplateContent.value,
+    };
+    try {
+      // Gọi API endpoint bằng Axios để gửi thông tin message
+      const response = await axios.put(
+        "http://localhost:8000/edit-template/" + newTemplate.id,
+        newTemplate
+      );
+      console.log(response.data.message); // Hiển thị response từ backend
+    } catch (error) {
+      console.error("Failed to send message:", error);
+    }
+    editTemplateName.value = "";
+    editTemplateContent.value = "";
+    showCreateAndEditTemplate.value = false;
+  }
+};
 
 // nhập receiver URL và message
-const receiverURL = ref("");
+const urlReceiver = ref("");
 const message = ref("");
 
 // box target setting
@@ -182,20 +311,32 @@ const targetSettingsMessages = {
 };
 
 // xem preview
-const previewData = ref({
+interface PreviewData {
+  platform: string;
+  sender: string;
+  urlReceiver: string;
+  message: string;
+  targetSettings: string[];
+}
+
+const previewData: Ref<PreviewData> = ref({
   platform: "",
   sender: "",
-  receiverURL: "",
-  template: "",
+  urlReceiver: "",
   message: "",
-  targetSettings: [""],
+  targetSettings: [],
 });
 const showPreviewModel = ref(false);
 const preview = () => {
-  previewData.value.platform = selectedPlatform.value;
-  previewData.value.sender = selectedSender.value;
-  previewData.value.receiverURL = receiverURL.value;
-  previewData.value.template = selectedTemplate.value;
+  if (selectedPlatform.value)
+    previewData.value.platform = selectedPlatform.value.name;
+  else previewData.value.platform = "Nothing";
+  if (selectedSender.value)
+    previewData.value.sender = selectedSender.value.name;
+  else previewData.value.sender = "Nothing";
+  if (urlReceiver.value == "") previewData.value.urlReceiver = "Nothing";
+  else previewData.value.urlReceiver = urlReceiver.value;
+
   previewData.value.message = message.value;
 
   if (
@@ -225,39 +366,33 @@ const preview = () => {
   showPreviewModel.value = true;
 };
 const closeModel = () => {
-  previewData.value.targetSettings.splice(0, previewData.value.targetSettings.length);
+  previewData.value.targetSettings.splice(
+    0,
+    previewData.value.targetSettings.length
+  );
   showPreviewModel.value = false;
 };
 
 // post
-// const send = () => {
-//   const sendMessage = {
-//     platform: selectedPlatform,
-//     sender: selectedSender,
-//     receiverURL: receiverURL,
-//     template: selectedTemplate,
-//     message: message,
-//     targetSettings: targetSettings,
-//   };
-//   selectedPlatform.value = "";
-//   selectedSender.value = "";
-//   receiverURL.value = "";
-//   selectedTemplate.value = "";
-//   message.value = "";
-//   targetSettings.alreadyConnected = false;
-//   targetSettings.changedPosition = false;
-//   targetSettings.followCandidate = false;
-//   showPreviewModel.value = false;
-// };
+interface Message {
+  platform: number | undefined;
+  receiver: number | undefined;
+  urlReceiver: string;
+  messageContent: string;
+  alreadyConnected: boolean;
+  changePosition: boolean;
+  followCandidate: boolean;
+}
 
 const send = async () => {
-  const sendMessage = {
-    platform: selectedPlatform.value,
-    sender: selectedSender.value,
-    receiverURL: receiverURL.value,
-    template: selectedTemplate.value,
-    message: message.value,
-    targetSettings: targetSettings,
+  const sendMessage: Message = {
+    platform: selectedPlatform.value?.id,
+    receiver: selectedSender.value?.id,
+    urlReceiver: urlReceiver.value,
+    messageContent: message.value,
+    alreadyConnected: targetSettings.alreadyConnected,
+    changePosition: targetSettings.changedPosition,
+    followCandidate: targetSettings.followCandidate,
   };
 
   try {
@@ -272,14 +407,18 @@ const send = async () => {
   }
 
   // Đặt giá trị các biến về mặc định sau khi gửi
-  selectedPlatform.value = "";
-  selectedSender.value = "";
-  receiverURL.value = "";
-  selectedTemplate.value = "";
+  selectedPlatform.value = undefined;
+  selectedSender.value = undefined;
+  urlReceiver.value = "";
+  selectedTemplate.value = undefined;
   message.value = "";
   targetSettings.alreadyConnected = false;
   targetSettings.changedPosition = false;
   targetSettings.followCandidate = false;
+  previewData.value.targetSettings.splice(
+    0,
+    previewData.value.targetSettings.length
+  );
   showPreviewModel.value = false;
 };
 </script>
@@ -290,9 +429,20 @@ const send = async () => {
   flex-direction: column;
 }
 
+.custom-input {
+  width: 40%;
+}
+
 .custom-textbox {
+  resize: none;
   width: 90%;
   height: 100px;
+}
+
+.custom-textbox-template-content {
+  resize: none;
+  width: 90%;
+  height: 120px;
 }
 
 .message {
@@ -301,7 +451,7 @@ const send = async () => {
 }
 
 ::placeholder {
-  color: #999; /* Định dạng màu cho chữ placeholder, ví dụ: xám nhạt (#999) */
+  color: #999;
 }
 
 .receiver-url {
