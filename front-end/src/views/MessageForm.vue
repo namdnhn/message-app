@@ -4,7 +4,7 @@
     <div class="select-platform-and-sender">
       <div class="select-box">
         <label>Platform: </label>
-        <select class="custom-select" v-model="selectedPlatform">
+        <select class="custom-select" v-model="selectedPlatform" required>
           <option disabled selected value="">Choose one platform</option>
           <option
             v-for="platform in platforms"
@@ -18,7 +18,7 @@
 
       <div class="select-box">
         <label> User: </label>
-        <select class="custom-select" v-model="selectedSender">
+        <select class="custom-select" v-model="selectedSender" required>
           <option disabled selected value="">Choose one user</option>
           <option
             v-for="sender in filterSendersByPlatforms"
@@ -37,6 +37,7 @@
         class="custom-textbox"
         v-model="urlReceiver"
         placeholder="Receiver's URL"
+        required
       ></textarea>
     </div>
 
@@ -44,12 +45,16 @@
       <h4>Message</h4>
       <div class="select-template">
         <div class="item">
-          <select class="custom-select" v-model="selectedTemplate">
+          <select
+            class="custom-select"
+            @change="onChange"
+            :value="selectedTemplateId"
+          >
             <option disabled selected value="">Choose one template</option>
             <option
               v-for="template in templates"
               :key="template.id"
-              :value="template.name"
+              :value="template.id"
             >
               {{ template.name }}
             </option>
@@ -62,11 +67,25 @@
           </button>
         </div>
       </div>
+      <div class="place-holder">
+        <label><h6>Placeholder</h6></label>
+        <div class="place-holder-order">
+          <button
+            class="place-holder-button"
+            v-for="option in placeholderOptions"
+            :key="option.name"
+            @click="addPlaceholder(option.text)"
+          >
+            {{ option.name }}
+          </button>
+        </div>
+      </div>
       <div class="message-box">
         <textarea
           class="custom-textbox"
           v-model="message"
           placeholder="Message"
+          required
         ></textarea>
       </div>
     </div>
@@ -216,7 +235,7 @@ interface Template {
 }
 
 const showCreateAndEditTemplate = ref(false);
-const templates = ref<Template[]>();
+const templates: Ref<Template[]> = ref([]);
 onMounted(async () => {
   try {
     const response = await axios.get<Template[]>(
@@ -227,8 +246,18 @@ onMounted(async () => {
     console.error("Failed to fetch templates:", error);
   }
 });
-const selectedTemplate: Ref<Template | undefined> = ref(undefined);
 
+const selectedTemplateId: Ref<number> = ref(0);
+const templateFilterById = computed(() => {
+  return templates.value.find(
+    (template) => template.id == selectedTemplateId.value
+  );
+});
+
+const onChange = (event: { target: { value: number } }) => {
+  selectedTemplateId.value = event.target.value;
+  message.value = templateFilterById.value?.template || "";
+};
 const createAndEditTemplate = () => {
   showCreateAndEditTemplate.value = true;
 };
@@ -294,8 +323,16 @@ const editTemplate = async () => {
 };
 
 // nhập receiver URL và message
+const placeholderOptions = [
+  { name: "candidate", text: " #__CANDIDATE__# " },
+  { name: "platform", text: " #__PLATFORM__# " },
+  { name: "age", text: " #__AGE__# " },
+];
+const addPlaceholder = (text : string) => {
+  message.value += text;
+};
 const urlReceiver = ref("");
-const message = ref("");
+const message: Ref<string> = ref("");
 
 // box target setting
 const targetSettings = reactive({
@@ -309,6 +346,27 @@ const targetSettingsMessages = {
   alreadyConnected: "Do not send to people you've already connected with",
   followCandidate: "Follow candidate when sending invite message",
 };
+
+// check validate
+const validateData = computed(() => {
+  if (
+    selectedSender.value != undefined &&
+    selectedPlatform.value != undefined &&
+    message.value != "" &&
+    urlReceiver.value != ""
+  ) {
+    return true;
+  } else {
+    if (selectedPlatform.value == undefined)
+      window.alert("Missing platform! Please choose a platform!");
+    else if (selectedSender.value == undefined)
+      window.alert("Missing sender! Please choose a sender!");
+    else if (message.value == "")
+      window.alert("Missing message! Please type the message!");
+    else window.alert("Missing Receiver's URL. Please type URL");
+    return false;
+  }
+});
 
 // xem preview
 interface PreviewData {
@@ -328,42 +386,45 @@ const previewData: Ref<PreviewData> = ref({
 });
 const showPreviewModel = ref(false);
 const preview = () => {
-  if (selectedPlatform.value)
-    previewData.value.platform = selectedPlatform.value.name;
-  else previewData.value.platform = "Nothing";
-  if (selectedSender.value)
-    previewData.value.sender = selectedSender.value.name;
-  else previewData.value.sender = "Nothing";
-  if (urlReceiver.value == "") previewData.value.urlReceiver = "Nothing";
-  else previewData.value.urlReceiver = urlReceiver.value;
+  if (validateData.value == true) {
+    if (selectedPlatform.value)
+      previewData.value.platform = selectedPlatform.value.name;
+    else previewData.value.platform = "Nothing";
+    if (selectedSender.value)
+      previewData.value.sender = selectedSender.value.name;
+    else previewData.value.sender = "Nothing";
+    if (urlReceiver.value == "") previewData.value.urlReceiver = "Nothing";
+    else previewData.value.urlReceiver = urlReceiver.value;
 
-  previewData.value.message = message.value;
+    previewData.value.message = message.value;
 
-  if (
-    !targetSettings.alreadyConnected &&
-    !targetSettings.changedPosition &&
-    !targetSettings.followCandidate
-  ) {
-    previewData.value.targetSettings.push("Not selected");
+    if (
+      !targetSettings.alreadyConnected &&
+      !targetSettings.changedPosition &&
+      !targetSettings.followCandidate
+    ) {
+      previewData.value.targetSettings.push("Not selected");
+    } else {
+      if (targetSettings.alreadyConnected) {
+        previewData.value.targetSettings.push(
+          targetSettingsMessages.alreadyConnected
+        );
+      }
+      if (targetSettings.changedPosition) {
+        previewData.value.targetSettings.push(
+          targetSettingsMessages.changedPosition
+        );
+      }
+      if (targetSettings.followCandidate) {
+        previewData.value.targetSettings.push(
+          targetSettingsMessages.followCandidate
+        );
+      }
+    }
+    showPreviewModel.value = true;
   } else {
-    if (targetSettings.alreadyConnected) {
-      previewData.value.targetSettings.push(
-        targetSettingsMessages.alreadyConnected
-      );
-    }
-    if (targetSettings.changedPosition) {
-      previewData.value.targetSettings.push(
-        targetSettingsMessages.changedPosition
-      );
-    }
-    if (targetSettings.followCandidate) {
-      previewData.value.targetSettings.push(
-        targetSettingsMessages.followCandidate
-      );
-    }
+    console.warn("Nô");
   }
-
-  showPreviewModel.value = true;
 };
 const closeModel = () => {
   previewData.value.targetSettings.splice(
@@ -410,7 +471,7 @@ const send = async () => {
   selectedPlatform.value = undefined;
   selectedSender.value = undefined;
   urlReceiver.value = "";
-  selectedTemplate.value = undefined;
+  selectedTemplateId.value = 0;
   message.value = "";
   targetSettings.alreadyConnected = false;
   targetSettings.changedPosition = false;
@@ -530,6 +591,21 @@ const send = async () => {
   right: 10px;
   font-size: 20px;
   cursor: pointer;
+}
+
+.place-holder {
+  margin-bottom: 15px;
+}
+
+.place-holder-button {
+  margin-right: 20px;
+  border-radius: 5px;
+  transition-duration: 0.4s;
+}
+
+.place-holder-button:hover {
+  background-color: black;
+  color: white;
 }
 
 h3 {
