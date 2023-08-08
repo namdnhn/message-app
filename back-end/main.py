@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Dict, List
 from models.template import SendTemplateRequest, GetTemplateRequest
@@ -6,6 +6,7 @@ from models.message import SendMessageRequest, GetMessageRequest
 from models.platform import Platform
 from models.sender import Sender, PlatformSender
 import asyncpg
+
 
 app = FastAPI()
 
@@ -151,6 +152,7 @@ async def create_template(template: SendTemplateRequest):
 async def update_template(template_id: int, new_template: SendTemplateRequest):
     async with app.state.pool.acquire() as connection:
         try:
+
             query = """UPDATE template
                        SET name = $1, template = $2
                        WHERE id = $3
