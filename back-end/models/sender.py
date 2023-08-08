@@ -1,11 +1,14 @@
-import uvicorn
-from fastapi import FastAPI
-from fastapi_camelcase import CamelModel
+from typing import List
+from pydantic import BaseModel
 
-class Sender(CamelModel):
+class Sender(BaseModel):
     id: int
     name: str
     platform: int
     
     class Config:
         orm_mode = True
+        
+class PlatformSender(BaseModel):
+    pid: int
+    senders: List[Sender]

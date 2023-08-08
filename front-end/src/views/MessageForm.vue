@@ -1,11 +1,22 @@
 <template>
+  <Header></Header>
   <div class="custom-background">
-    <h1>Message</h1>
+    <div style="margin-top: 10px; margin-bottom: 20px">
+      <h2 style="font: Verdana">Message</h2>
+    </div>
+
     <div class="select-platform-and-sender">
       <div class="select-box">
-        <label>Platform: </label>
+        <label>
+          <div class="header-label">
+            <h6 style="margin: 2.5px 0px">Platform</h6>
+            <div class="rectangle"><b>Required</b></div>
+          </div>
+        </label>
         <select class="custom-select" v-model="selectedPlatform" required>
-          <option disabled selected value="">Choose one platform</option>
+          <option disabled selected value="undefined">
+            Choose one platform
+          </option>
           <option
             v-for="platform in platforms"
             :key="platform.id"
@@ -17,9 +28,14 @@
       </div>
 
       <div class="select-box">
-        <label> User: </label>
+        <label>
+          <div class="header-label">
+            <h6 style="margin: 2.5px 0px">Sender</h6>
+            <div class="rectangle"><b>Required</b></div>
+          </div>
+        </label>
         <select class="custom-select" v-model="selectedSender" required>
-          <option disabled selected value="">Choose one user</option>
+          <option disabled selected value="undefined">Choose one user</option>
           <option
             v-for="sender in filterSendersByPlatforms"
             :key="sender.id"
@@ -32,7 +48,12 @@
     </div>
 
     <div class="receiver-url">
-      <label><h4>URL:</h4></label>
+      <label
+        ><div class="header-label">
+          <h6 style="margin: 2.5px 0px">Receiver's URL</h6>
+          <div class="rectangle"><b>Required</b></div>
+        </div></label
+      >
       <textarea
         class="custom-textbox"
         v-model="urlReceiver"
@@ -42,15 +63,15 @@
     </div>
 
     <div class="message">
-      <h4>Message</h4>
+      <h6>Message</h6>
       <div class="select-template">
         <div class="item">
           <select
             class="custom-select"
-            @change="onChange"
+            @change="onChangeTemplate"
             :value="selectedTemplateId"
           >
-            <option disabled selected value="">Choose one template</option>
+            <option disabled selected value="0">Choose one template</option>
             <option
               v-for="template in templates"
               :key="template.id"
@@ -62,13 +83,20 @@
         </div>
 
         <div class="item">
-          <button class="create-template" @click="createAndEditTemplate">
+          <button
+            class="create-and-edit-template-button"
+            @click="createAndEditTemplate"
+          >
             Create and Edit Template
           </button>
         </div>
       </div>
       <div class="place-holder">
-        <label><h6>Placeholder</h6></label>
+        <label>
+          <p style="font-size: x-small; margin-left: 10px; margin-bottom: 5px">
+            Placeholder
+          </p>
+        </label>
         <div class="place-holder-order">
           <button
             class="place-holder-button"
@@ -78,6 +106,22 @@
           >
             {{ option.name }}
           </button>
+        </div>
+      </div>
+      <div class="header-label">
+        <div
+          style="
+            height: 17px;
+            width: 42px;
+            align-items: center;
+            border: 2px solid red;
+            margin-top: 5px;
+            margin-bottom: 10px;
+            font-size: 9px;
+            color: red;
+          "
+        >
+          <b>Required</b>
         </div>
       </div>
       <div class="message-box">
@@ -90,41 +134,92 @@
       </div>
     </div>
 
-    <h4>Target Settings</h4>
+    <h6>Target Settings</h6>
     <div class="checkbox-message">
-      <label>
+      <label style="font-size: smaller; margin: 5px; font-weight: bold">
         <input type="checkbox" v-model="targetSettings.changedPosition" />
         {{ targetSettingsMessages.changedPosition }}
       </label>
-      <label>
+      <label style="font-size: smaller; margin: 5px; font-weight: bold">
         <input type="checkbox" v-model="targetSettings.alreadyConnected" />
         {{ targetSettingsMessages.alreadyConnected }}
       </label>
-      <label>
+      <label style="font-size: smaller; margin: 5px; font-weight: bold">
         <input type="checkbox" v-model="targetSettings.followCandidate" />
         {{ targetSettingsMessages.followCandidate }}
       </label>
     </div>
 
-    <button @click="preview">Preview and Send</button>
+    <div class="check-validate">
+      <p v-if="!checkSelectedPlatform">
+        You must choose platform before send message
+      </p>
+      <p v-if="!checkSelectedSender">
+        You must choose a sender before send message
+      </p>
+      <p v-if="!checkReceiverURL">The Receiver URL box can not be empty</p>
+      <p v-if="!checkMessage">The message box can not be empty</p>
+    </div>
+    <button
+      class="preview-and-send-button"
+      style="margin-top: 5px"
+      @click="preview"
+      :disabled="
+        !checkMessage ||
+        !checkReceiverURL ||
+        !checkSelectedPlatform ||
+        !checkSelectedSender
+      "
+    >
+      Preview and Send
+    </button>
 
     <div v-if="showPreviewModel" class="popup">
       <div class="popup-content">
         <span class="close" @click="closeModel">&times;</span>
         <h3>Preview</h3>
-        <p>Platform: {{ previewData.platform }}</p>
-        <p>Sender: {{ previewData.sender }}</p>
-        <p>Receiver URL: {{ previewData.urlReceiver }}</p>
-        <p>Message: {{ previewData.message }}</p>
-        <p>Choosen target setting:</p>
-        <li
-          v-for="message in previewData.targetSettings"
-          :key="message"
-          :value="message"
-        >
-          {{ message }}
-        </li>
-        <button @click="send">Send</button>
+        <table class="config-table">
+          <tr>
+            <th>Platform</th>
+            <td>{{ previewData.platform }}</td>
+          </tr>
+          <tr>
+            <th>Receiver URL</th>
+            <td>{{ previewData.urlReceiver }}</td>
+          </tr>
+          <tr>
+            <th>Sender</th>
+            <td>{{ previewData.sender }}</td>
+          </tr>
+          <tr>
+            <th>Message</th>
+            <td>
+              <textarea
+                disabled
+                class="custom-textbox"
+                :value="message"
+                required
+              ></textarea>
+            </td>
+          </tr>
+          <tr>
+            <th>Choosen target setting</th>
+            <td>
+              <li
+                v-for="message in previewData.targetSettings"
+                :key="message"
+                :value="message"
+                style="font-weight: bold"
+              >
+                {{ message }}
+              </li>
+            </td>
+          </tr>
+        </table>
+        <button class="preview-and-send-button" @click="send">Send</button>
+        <button class="create-and-edit-template-button" @click="closeModel">
+          Back
+        </button>
       </div>
     </div>
 
@@ -134,36 +229,128 @@
           <Tab title="Create">
             <span class="close" @click="closeTemplate">&times;</span>
             <h3>Create Template</h3>
-            <li>Template name</li>
-            <input v-model="newTemplateName" class="custom-input" />
-            <li>Template content</li>
-            <textarea
-              v-model="newTemplateContent"
-              class="custom-textbox-template-content"
-            ></textarea>
-            <div><button @click="saveTemplate">Save</button></div>
+            <table class="config-table">
+              <tr>
+                <th>Template name</th>
+                <td>
+                  <input
+                    v-model="newTemplateName"
+                    class="custom-input"
+                    placeholder="Template name"
+                  />
+                </td>
+              </tr>
+              <tr>
+                <th>Template content</th>
+                <td>
+                  <textarea
+                    v-model="newTemplateContent"
+                    class="custom-textbox-template-content"
+                    placeholder="Template content"
+                  ></textarea>
+                </td>
+              </tr>
+            </table>
+            <div class="check-validate">
+              <p v-if="!checkNewTemplateName">
+                The Template Name box can not be empty
+              </p>
+              <p v-if="!checkNewTemplateContent">
+                The Template Content box can not be empty
+              </p>
+            </div>
+            <div>
+              <button
+                class="preview-and-send-button"
+                @click="saveTemplate"
+                :disabled="!checkNewTemplateName || !checkNewTemplateContent"
+              >
+                Save
+              </button>
+              <button
+                class="create-and-edit-template-button"
+                @click="closeTemplate"
+              >
+                Back
+              </button>
+            </div>
           </Tab>
           <Tab title="Edit">
             <span class="close" @click="closeTemplate">&times;</span>
             <h3>Edit Template</h3>
-            <li>Choose Template</li>
-            <select class="custom-select" v-model="selectedTemplateToEdit">
-              <option
-                v-for="template in templates"
-                :key="template.id"
-                :value="template"
+            <table class="config-table">
+              <tr>
+                <th>Choose Template</th>
+                <td>
+                  <select
+                    class="custom-select-edit-template"
+                    @change="onChangeEditTemplate"
+                    :value="selectedTemplateToEditId"
+                  >
+                    <option
+                      v-for="template in templates"
+                      :key="template.id"
+                      :value="template.id"
+                    >
+                      {{ template.name }}
+                    </option>
+                  </select>
+                </td>
+              </tr>
+              <tr>
+                <th>Template name</th>
+                <td>
+                  <input
+                    v-model="editTemplateName"
+                    class="custom-input"
+                    placeholder="Template name"
+                    :disabled="selectedTemplateToEditId === 0"
+                  />
+                </td>
+              </tr>
+              <tr>
+                <th>Template content</th>
+                <td>
+                  <textarea
+                    v-model="editTemplateContent"
+                    class="custom-textbox-template-content"
+                    placeholder="Template content"
+                    :disabled="selectedTemplateToEditId === 0"
+                  ></textarea>
+                </td>
+              </tr>
+            </table>
+            <div class="check-validate">
+              <p v-if="!checkSelectedTemplateToEdit">
+                You must choose a template to edit
+              </p>
+              <p v-if="!checkEditTemplateName">
+                The Template Name box can not be empty
+              </p>
+              <p v-if="!checkEditTemplateContent">
+                The Template Content box can not be empty
+              </p>
+            </div>
+            <div>
+              <button
+                class="preview-and-send-button"
+                @click="editTemplate"
+                :disabled="
+                  !checkSelectedTemplateToEdit ||
+                  !checkEditTemplateName ||
+                  !checkEditTemplateContent
+                "
               >
-                {{ template.name }}
-              </option>
-            </select>
-            <li>Template name</li>
-            <input v-model="editTemplateName" class="custom-input" />
-            <li>Template content</li>
-            <textarea
-              v-model="editTemplateContent"
-              class="custom-textbox-template-content"
-            ></textarea>
-            <div><button @click="editTemplate">Save</button></div>
+                Save
+              </button>
+              <button
+                class="delete-button"
+                @click="deleteTemplate"
+                :disabled="!checkSelectedTemplateToEdit"
+              >
+                Delete
+              </button>
+            </div>
           </Tab>
         </TabWrapper>
       </div>
@@ -176,8 +363,9 @@ import axios from "axios";
 import { computed, onMounted, reactive, type Ref, ref, watch } from "vue";
 import TabWrapper from "@/components/tab/TabWrapper.vue";
 import Tab from "@/components/tab/Tab.vue";
+import Header from "@/components/Header.vue";
 
-const components = { Tab, TabWrapper };
+const components = { Tab, TabWrapper, Header };
 
 // chọn platform
 interface Platform {
@@ -185,15 +373,21 @@ interface Platform {
   name: string;
 }
 const platforms = ref<Platform[]>();
-onMounted(async () => {
+
+const fetchPlatforms = async () => {
   try {
     const response = await axios.get("http://localhost:8000/platforms");
     platforms.value = response.data;
   } catch (error) {
-    console.error("Failed to fetch platforms:", error);
+    console.error("Lỗi khi lấy thông tin các nền tảng:", error);
   }
-});
+};
+
 const selectedPlatform = ref<Platform>();
+const checkSelectedPlatform = computed(() => {
+  if (selectedPlatform.value != undefined) return true;
+  else return false;
+});
 
 // chọn sender
 interface Sender {
@@ -202,22 +396,22 @@ interface Sender {
   platform: number;
 }
 
-interface SendersData {
+interface PlatformSenderList {
   [key: number]: Sender[];
 }
 
-const senders: Ref<SendersData> = ref({});
+const senders: Ref<PlatformSenderList> = ref({});
 
 const selectedSender = ref<Sender>();
 
-onMounted(async () => {
+const fetchSenders = async () => {
   try {
     const response = await axios.get("http://localhost:8000/senders");
     senders.value = response.data;
   } catch (error) {
-    console.error("Failed to fetch senders:", error);
+    console.error("Lỗi khi lấy thông tin người gửi:", error);
   }
-});
+};
 
 const filterSendersByPlatforms = computed(() => {
   if (selectedPlatform.value) {
@@ -227,24 +421,39 @@ const filterSendersByPlatforms = computed(() => {
   }
 });
 
+const checkSelectedSender = computed(() => {
+  if (selectedSender.value != undefined) return true;
+  else return false;
+});
+
 // chọn template
-interface Template {
+interface SendTemplateRequest {
+  name: string;
+  template: string;
+}
+
+interface GetTemplateRequest {
   id: number;
   name: string;
   template: string;
 }
 
 const showCreateAndEditTemplate = ref(false);
-const templates: Ref<Template[]> = ref([]);
-onMounted(async () => {
+const templates: Ref<GetTemplateRequest[]> = ref([]);
+
+const fetchTemplates = async () => {
   try {
-    const response = await axios.get<Template[]>(
-      "http://localhost:8000/templates"
-    );
+    const response = await axios.get("http://localhost:8000/templates");
     templates.value = response.data;
   } catch (error) {
-    console.error("Failed to fetch templates:", error);
+    console.error("Lỗi khi lấy thông tin các mẫu:", error);
   }
+};
+
+onMounted(() => {
+  fetchPlatforms();
+  fetchSenders();
+  fetchTemplates();
 });
 
 const selectedTemplateId: Ref<number> = ref(0);
@@ -254,7 +463,13 @@ const templateFilterById = computed(() => {
   );
 });
 
-const onChange = (event: { target: { value: number } }) => {
+const templateToEditFilterById = computed(() => {
+  return templates.value.find(
+    (template) => template.id == selectedTemplateToEditId.value
+  );
+});
+
+const onChangeTemplate = (event: { target: { value: number } }) => {
   selectedTemplateId.value = event.target.value;
   message.value = templateFilterById.value?.template || "";
 };
@@ -268,19 +483,24 @@ const closeTemplate = () => {
 // create Template
 const newTemplateName = ref("");
 const newTemplateContent = ref("");
+const checkNewTemplateName = computed(() => {
+  return newTemplateName.value != "";
+});
+const checkNewTemplateContent = computed(() => {
+  return newTemplateContent.value != "";
+});
 const saveTemplate = async () => {
-  const newTemplate: Template = {
-    id: 0,
+  const newTemplate: SendTemplateRequest = {
     name: newTemplateName.value,
     template: newTemplateContent.value,
   };
   try {
-    // Gọi API endpoint bằng Axios để gửi thông tin message
     const response = await axios.post(
-      "http://localhost:8000/create-template/",
+      "http://localhost:8000/create-templates/",
       newTemplate
     );
-    console.log(response.data.message); // Hiển thị response từ backend
+    window.alert("Tạo template " + response.data.name + " thành công");
+    fetchTemplates();
   } catch (error) {
     console.error("Failed to send message:", error);
   }
@@ -292,34 +512,67 @@ const saveTemplate = async () => {
 // edit Template
 const editTemplateName = ref("");
 const editTemplateContent = ref("");
-const selectedTemplateToEdit: Ref<Template | undefined> = ref(undefined);
+const selectedTemplateToEditId: Ref<number> = ref(0);
 
-watch(selectedTemplateToEdit, (newValue, oldValue) => {
-  console.log(newValue);
+const checkEditTemplateName = computed(() => {
+  return editTemplateName.value != "";
 });
-const editTemplate = async () => {
-  const temp_id: number | undefined = selectedTemplateToEdit.value?.id;
-  console.log(temp_id);
-  if (temp_id != undefined) {
-    const newTemplate: Template = {
-      id: temp_id,
-      name: editTemplateName.value,
-      template: editTemplateContent.value,
-    };
-    try {
-      // Gọi API endpoint bằng Axios để gửi thông tin message
-      const response = await axios.put(
-        "http://localhost:8000/edit-template/" + newTemplate.id,
-        newTemplate
-      );
-      console.log(response.data.message); // Hiển thị response từ backend
-    } catch (error) {
-      console.error("Failed to send message:", error);
-    }
-    editTemplateName.value = "";
-    editTemplateContent.value = "";
-    showCreateAndEditTemplate.value = false;
+const checkEditTemplateContent = computed(() => {
+  return editTemplateContent.value != "";
+});
+const checkSelectedTemplateToEdit = computed(() => {
+  return selectedTemplateToEditId.value != 0;
+});
+
+// delete Template
+const deleteTemplate = async () => {
+  if (selectedTemplateToEditId.value == 0) {
+    return;
   }
+  try {
+    // Gọi API endpoint bằng Axios để gửi thông tin message
+    const response = await axios.delete(
+      "http://localhost:8000/delete-templates/" + selectedTemplateToEditId.value
+    );
+    window.alert("Xóa template " + response.data.id + " thành công");
+    fetchTemplates();
+    // console.log(response.data.message); // Hiển thị response từ backend
+  } catch (error) {
+    console.error("Failed to send message:", error);
+  }
+  editTemplateName.value = "";
+  editTemplateContent.value = "";
+  showCreateAndEditTemplate.value = false;
+};
+
+const editTemplate = async () => {
+  if (selectedTemplateToEditId.value == 0) {
+    return;
+  }
+  const newTemplate: SendTemplateRequest = {
+    name: editTemplateName.value,
+    template: editTemplateContent.value,
+  };
+  try {
+    // Gọi API endpoint bằng Axios để gửi thông tin message
+    const response = await axios.put(
+      "http://localhost:8000/edit-templates/" + selectedTemplateToEditId.value,
+      newTemplate
+    );
+    window.alert("Chỉnh sửa template " + response.data.name + " thành công");
+    fetchTemplates();
+  } catch (error) {
+    console.error("Failed to send message:", error);
+  }
+  editTemplateName.value = "";
+  editTemplateContent.value = "";
+  showCreateAndEditTemplate.value = false;
+};
+
+const onChangeEditTemplate = (event: { target: { value: number } }) => {
+  selectedTemplateToEditId.value = event.target.value;
+  editTemplateName.value = templateToEditFilterById.value?.name || "";
+  editTemplateContent.value = templateToEditFilterById.value?.template || "";
 };
 
 // nhập receiver URL và message
@@ -328,7 +581,7 @@ const placeholderOptions = [
   { name: "platform", text: " #__PLATFORM__# " },
   { name: "age", text: " #__AGE__# " },
 ];
-const addPlaceholder = (text : string) => {
+const addPlaceholder = (text: string) => {
   message.value += text;
 };
 const urlReceiver = ref("");
@@ -349,23 +602,22 @@ const targetSettingsMessages = {
 
 // check validate
 const validateData = computed(() => {
-  if (
-    selectedSender.value != undefined &&
-    selectedPlatform.value != undefined &&
-    message.value != "" &&
-    urlReceiver.value != ""
-  ) {
-    return true;
-  } else {
-    if (selectedPlatform.value == undefined)
-      window.alert("Missing platform! Please choose a platform!");
-    else if (selectedSender.value == undefined)
-      window.alert("Missing sender! Please choose a sender!");
-    else if (message.value == "")
-      window.alert("Missing message! Please type the message!");
-    else window.alert("Missing Receiver's URL. Please type URL");
-    return false;
-  }
+  return (
+    checkMessage &&
+    checkReceiverURL &&
+    checkSelectedPlatform &&
+    checkSelectedSender
+  );
+});
+
+const checkReceiverURL = computed(() => {
+  if (urlReceiver.value != "") return true;
+  else return false;
+});
+
+const checkMessage = computed(() => {
+  if (message.value != "") return true;
+  else return false;
 });
 
 // xem preview
@@ -377,7 +629,7 @@ interface PreviewData {
   targetSettings: string[];
 }
 
-const previewData: Ref<PreviewData> = ref({
+const previewData: PreviewData = reactive({
   platform: "",
   sender: "",
   urlReceiver: "",
@@ -386,58 +638,50 @@ const previewData: Ref<PreviewData> = ref({
 });
 const showPreviewModel = ref(false);
 const preview = () => {
-  if (validateData.value == true) {
-    if (selectedPlatform.value)
-      previewData.value.platform = selectedPlatform.value.name;
-    else previewData.value.platform = "Nothing";
-    if (selectedSender.value)
-      previewData.value.sender = selectedSender.value.name;
-    else previewData.value.sender = "Nothing";
-    if (urlReceiver.value == "") previewData.value.urlReceiver = "Nothing";
-    else previewData.value.urlReceiver = urlReceiver.value;
-
-    previewData.value.message = message.value;
-
-    if (
-      !targetSettings.alreadyConnected &&
-      !targetSettings.changedPosition &&
-      !targetSettings.followCandidate
-    ) {
-      previewData.value.targetSettings.push("Not selected");
-    } else {
-      if (targetSettings.alreadyConnected) {
-        previewData.value.targetSettings.push(
-          targetSettingsMessages.alreadyConnected
-        );
-      }
-      if (targetSettings.changedPosition) {
-        previewData.value.targetSettings.push(
-          targetSettingsMessages.changedPosition
-        );
-      }
-      if (targetSettings.followCandidate) {
-        previewData.value.targetSettings.push(
-          targetSettingsMessages.followCandidate
-        );
-      }
-    }
-    showPreviewModel.value = true;
-  } else {
-    console.warn("Nô");
+  if (!validateData.value) {
+    return;
   }
+  if (selectedPlatform.value)
+    previewData.platform = selectedPlatform.value.name;
+  else previewData.platform = "Nothing";
+  if (selectedSender.value) previewData.sender = selectedSender.value.name;
+  else previewData.sender = "Nothing";
+  if (urlReceiver.value == "") previewData.urlReceiver = "Nothing";
+  else previewData.urlReceiver = urlReceiver.value;
+
+  previewData.message = message.value;
+
+  if (
+    !targetSettings.alreadyConnected &&
+    !targetSettings.changedPosition &&
+    !targetSettings.followCandidate
+  ) {
+    previewData.targetSettings.push("Not selected");
+  } else {
+    if (targetSettings.alreadyConnected) {
+      previewData.targetSettings.push(targetSettingsMessages.alreadyConnected);
+    }
+    if (targetSettings.changedPosition) {
+      previewData.targetSettings.push(targetSettingsMessages.changedPosition);
+    }
+    if (targetSettings.followCandidate) {
+      previewData.targetSettings.push(targetSettingsMessages.followCandidate);
+    }
+  }
+  showPreviewModel.value = true;
 };
 const closeModel = () => {
-  previewData.value.targetSettings.splice(
-    0,
-    previewData.value.targetSettings.length
-  );
+  editTemplateContent.value = "";
+  editTemplateName.value = "";
+  selectedTemplateToEditId.value = 0;
+  previewData.targetSettings.splice(0, previewData.targetSettings.length);
   showPreviewModel.value = false;
 };
 
 // post
-interface Message {
-  platform: number | undefined;
-  receiver: number | undefined;
+interface SendMessageRequest {
+  platform?: number;
+  receiver?: number;
   urlReceiver: string;
   messageContent: string;
   alreadyConnected: boolean;
@@ -446,7 +690,7 @@ interface Message {
 }
 
 const send = async () => {
-  const sendMessage: Message = {
+  const sendMessage: SendMessageRequest = {
     platform: selectedPlatform.value?.id,
     receiver: selectedSender.value?.id,
     urlReceiver: urlReceiver.value,
@@ -457,53 +701,80 @@ const send = async () => {
   };
 
   try {
-    // Gọi API endpoint bằng Axios để gửi thông tin message
     const response = await axios.post(
-      "http://localhost:8000/send-message/",
+      "http://localhost:8000/create-messages/",
       sendMessage
     );
-    console.log(response.data.message); // Hiển thị response từ backend
+    // Đặt giá trị các biến về mặc định sau khi gửi
+    selectedPlatform.value = undefined;
+    selectedSender.value = undefined;
+    urlReceiver.value = "";
+    selectedTemplateId.value = 0;
+    message.value = "";
+    targetSettings.alreadyConnected = false;
+    targetSettings.changedPosition = false;
+    targetSettings.followCandidate = false;
+    previewData.targetSettings.splice(0, previewData.targetSettings.length);
   } catch (error) {
-    console.error("Failed to send message:", error);
+    window.alert("Failed to send message: " + error);
   }
 
-  // Đặt giá trị các biến về mặc định sau khi gửi
-  selectedPlatform.value = undefined;
-  selectedSender.value = undefined;
-  urlReceiver.value = "";
-  selectedTemplateId.value = 0;
-  message.value = "";
-  targetSettings.alreadyConnected = false;
-  targetSettings.changedPosition = false;
-  targetSettings.followCandidate = false;
-  previewData.value.targetSettings.splice(
-    0,
-    previewData.value.targetSettings.length
-  );
   showPreviewModel.value = false;
 };
 </script>
 
 <style>
+.custom-background {
+  width: 70%;
+  margin: 10px auto;
+  border: 1px solid #999;
+  padding: 35px;
+  border-radius: 10px;
+  background-color: white;
+  box-shadow: 0px 2px 10px grey;
+}
+
 .checkbox-message {
   display: flex;
   flex-direction: column;
 }
 
 .custom-input {
-  width: 40%;
+  border: 2px solid #999;
+  border-radius: 5px;
+  width: 90%;
 }
 
 .custom-textbox {
+  border-radius: 5px;
   resize: none;
-  width: 90%;
+  width: 100%;
   height: 100px;
 }
 
 .custom-textbox-template-content {
+  border: 2px solid #999;
+  border-radius: 5px;
   resize: none;
   width: 90%;
   height: 120px;
+}
+
+.create-and-edit-template-button {
+  height: 30px;
+  border-color: blue;
+  background-color: white;
+  color: blue;
+  font-weight: bold;
+  align-items: center;
+  margin-right: 20px;
+  border-radius: 5px;
+  transition-duration: 0.4s;
+}
+
+.create-and-edit-template-button:hover {
+  border-color: red;
+  color: red;
 }
 
 .message {
@@ -518,19 +789,23 @@ const send = async () => {
 .receiver-url {
   display: flex;
   flex-direction: column;
-  margin-top: 10px;
-  margin-bottom: 10px;
+  margin-top: 20px;
+  margin-bottom: 20px;
 }
 
 .select-platform-and-sender {
   display: flex;
-  margin-top: 10px;
-  margin-bottom: 10px;
+  margin-top: 20px;
+  margin-bottom: 20px;
 }
 
 .select-platform-and-sender .custom-select {
-  width: 60%;
+  border-radius: 5px;
+  width: 70%;
   height: 30px;
+  cursor: pointer;
+  display: inline-block;
+  font-size: 16px;
 }
 
 .select-template {
@@ -544,14 +819,9 @@ const send = async () => {
 }
 
 .select-template .custom-select {
-  width: 60%;
+  border-radius: 5px;
+  width: 70%;
   height: 30px;
-}
-
-.select-template .create-template {
-  height: 30px;
-  align-items: center;
-  display: flex;
 }
 
 .select-box {
@@ -574,13 +844,13 @@ const send = async () => {
 }
 
 .popup-content {
-  width: 50%;
+  width: 75%;
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   background-color: white;
-  padding: 20px;
+  padding: 30px;
   border-radius: 10px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
 }
@@ -594,25 +864,130 @@ const send = async () => {
 }
 
 .place-holder {
-  margin-bottom: 15px;
+  background-color: rgb(216, 216, 216);
+  margin-bottom: 5px;
 }
 
 .place-holder-button {
-  margin-right: 20px;
+  height: 20px;
+  align-items: center;
+  font-size: x-small;
+  border-color: blue;
+  background-color: blue;
+  color: white;
+  font-weight: bold;
+  margin-left: 10px;
+  margin-right: 10px;
+  margin-bottom: 10px;
   border-radius: 5px;
   transition-duration: 0.4s;
 }
 
 .place-holder-button:hover {
-  background-color: black;
+  border-color: rgb(122, 122, 255);
+  background-color: rgb(122, 122, 255);
+}
+
+.custom-select-edit-template {
+  border: 2px solid #999;
+  border-radius: 5px;
+}
+
+.rectangle {
+  height: 17px;
+  width: 42px;
+  border: 2px solid red;
+  margin: 5px;
+  align-items: center;
+  font-size: 9px;
+  color: red;
+}
+
+.header-label {
+  display: flex;
+}
+
+.preview-and-send-button {
+  height: 30px;
+  margin: 0% 42.5%;
+  border-color: orange;
+  background-color: orange;
+  color: white;
+  font-weight: bold;
+  align-items: center;
+  margin-right: 20px;
+  border-radius: 5px;
+  transition-duration: 0.4s;
+}
+
+.preview-and-send-button:hover {
+  border-color: rgb(250, 197, 98);
+  background-color: rgb(250, 197, 98);
   color: white;
 }
 
+.preview-and-send-button:disabled {
+  border-color: rgb(250, 232, 197);
+  background-color: rgb(232, 215, 184);
+  color: white;
+}
+
+.config-table {
+  width: 100%;
+  margin: 20px;
+}
+
+.config-table th {
+  /* border: 1px solid black; */
+  width: 25%;
+  padding: 10px;
+  font-weight: bold;
+  color: #666464;
+}
+
+.config-table td {
+  /* border: 1px solid black; */
+  width: 75%;
+  padding: 10px;
+  font-weight: bold;
+}
+
+.check-validate {
+  text-align: center;
+  color: red;
+  font-size: x-small;
+  line-height: 0.5px;
+  margin-top: 10px;
+}
+
+.delete-button {
+  height: 30px;
+  border-color: red;
+  background-color: white;
+  color: red;
+  font-weight: bold;
+  align-items: center;
+  margin-right: 20px;
+  border-radius: 5px;
+  transition-duration: 0.4s;
+}
+
+.delete-button:hover {
+  border-color: rgb(168, 2, 2);
+  color: rgb(168, 2, 2);
+}
+
+.delete-button:disabled {
+  border-color: rgb(255, 134, 134);
+  color: rgb(255, 134, 134);
+}
 h3 {
+  font: Verdana;
   margin-top: 0;
 }
 
 p {
+  font: Verdana;
   margin: 5px 0;
 }
 
@@ -624,5 +999,14 @@ ul {
 
 li {
   margin: 3px 0;
+}
+select {
+  cursor: pointer;
+  display: inline-block;
+  position: relative;
+  font-size: 16px;
+  color: black;
+  width: auto;
+  height: auto;
 }
 </style>

@@ -1,7 +1,7 @@
 <template>
   <div class="tabs">
     <ul class="tabs__header">
-      <li v-for="title in tabTitles" :key="title" @click="selectedTab = title">
+      <li v-for="title in tabTitles" :key="title" :class="{ 'active': selectedTab === title }" @click="selectedTab = title">
         {{ title }}
       </li>
     </ul>
@@ -33,20 +33,22 @@ export default {
 }
 
 .tabs__header {
-  margin-bottom: 10px;
   list-style: none;
   padding: 0;
   display: flex;
+  border-bottom: 1px solid blue;
 }
 
 .tabs__header li {
   width: 80px;
   text-align: center;
-  padding: 10px 20px;
-  margin-right: 10px;
-  background-color: #ddd;
-  border-radius: 5px;
+  padding: 8px 18px;
   cursor: pointer;
+  margin: 0;
   transition: 0.4s all ease-out;
+
+  &.active {
+    border-bottom: 3px solid blue;
+  }
 }
 </style>

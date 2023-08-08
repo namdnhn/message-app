@@ -1,11 +1,11 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Dict, List, Tuple
-from models.template import Template
-from models.message import Message
+from typing import Dict, List
+from models.template import SendTemplateRequest, GetTemplateRequest
+from models.message import SendMessageRequest, GetMessageRequest
 from models.platform import Platform
-from models.sender import Sender
-import asyncpg, logging
+from models.sender import Sender, PlatformSender
+import asyncpg
 
 app = FastAPI()
 
@@ -54,7 +54,9 @@ async def get_senders():
             result = {}
             for row in rows:
                 platform = Platform(id=row["p_id"], name=row["p_name"])
-                sender = Sender(id=row["s_id"], name=row["s_name"], platform=row["s_platform"])
+                sender = Sender(
+                    id=row["s_id"], name=row["s_name"], platform=row["s_platform"]
+                )
                 if (platform.id, platform.name) not in result:
                     result[platform.id] = [sender]
                 else:
@@ -65,20 +67,38 @@ async def get_senders():
             raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/templates", response_model=List[Template])
+@app.get("/templates", response_model=List[GetTemplateRequest])
 async def get_templates():
     async with app.state.pool.acquire() as connection:
         query = "SELECT * FROM template"
         rows = await connection.fetch(query)
     templates = [
-        Template(id=row["id"], name=row["name"], template=row["template"])
+        GetTemplateRequest(id=row["id"], name=row["name"], template=row["template"])
         for row in rows
     ]
     return templates
 
 
-@app.post("/send-message")
-async def send_message(message: Message):
+@app.get("/messages/{message_id}", response_model=GetMessageRequest)
+async def get_messages_by_id(message_id: int):
+    async with app.state.pool.acquire() as connection:
+        query = "SELECT * FROM message WHERE id = $1"
+        record = await connection.fetchrow(query, message_id)
+    message = GetMessageRequest(
+        id=record["id"],
+        platform=record["platform"],
+        receiver=record["receiver"],
+        urlReceiver=record["url_receiver"],
+        messageContent=record["message_content"],
+        alreadyConnected=record["already_connected"],
+        changePosition=record["change_position"],
+        followCandidate=record["follow_candidate"],
+    )
+    return message
+
+
+@app.post("/create-messages")
+async def send_message(message: SendMessageRequest):
     async with app.state.pool.acquire() as connection:
         try:
             query = """INSERT INTO message (platform, receiver, url_receiver, message_content, already_connected, change_position, follow_candidate) 
@@ -97,7 +117,8 @@ async def send_message(message: Message):
             print("Record:", record)
             if not record:
                 raise HTTPException(status_code=500, detail="Failed to insert item.")
-            return Message(
+            return GetMessageRequest(
+                id=record["id"],
                 platform=record["platform"],
                 receiver=record["receiver"],
                 urlReceiver=record["url_receiver"],
@@ -107,18 +128,18 @@ async def send_message(message: Message):
                 followCandidate=record["follow_candidate"],
             )
         except Exception as e:
-            print(str(e))
             raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/create-template")
-async def create_template(template: Template):
+
+@app.post("/create-templates")
+async def create_template(template: SendTemplateRequest):
     async with app.state.pool.acquire() as connection:
         try:
             query = """INSERT INTO template (name, template)
                         VALUES ($1, $2)
                         RETURNING id, name, template"""
             record = await connection.fetchrow(query, template.name, template.template)
-            return Template(
+            return GetTemplateRequest(
                 id=record["id"], name=record["name"], template=record["template"]
             )
         except Exception as e:
@@ -126,8 +147,8 @@ async def create_template(template: Template):
             raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.put("/edit-template/{template_id}")
-async def update_template(template_id: int, new_template: Template):
+@app.put("/edit-templates/{template_id}")
+async def update_template(template_id: int, new_template: SendTemplateRequest):
     async with app.state.pool.acquire() as connection:
         try:
             query = """UPDATE template
@@ -139,16 +160,29 @@ async def update_template(template_id: int, new_template: Template):
             )
             if not record:
                 raise HTTPException(status_code=404, detail="Template not found.")
-            return Template(
+            return GetTemplateRequest(
                 id=record["id"], name=record["name"], template=record["template"]
             )
         except Exception as e:
             print(str(e))
             raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/example")
-async def example_endpoint(request: Request):
-    # Kiểm tra thông tin dữ liệu POST bằng cách gọi phương thức .json()
-    post_data = await request.json()
-    print("Data POST lên:", post_data)
-    return {"message": "Dữ liệu đã được nhận và xử lý."}
+
+@app.delete("/delete-templates/{template_id}")
+async def delete_template(template_id: int):
+    async with app.state.pool.acquire() as connection:
+        try:
+            query = (
+                """DELETE FROM template WHERE id = $1 RETURNING id, name, template"""
+            )
+            record = await connection.fetchrow(query, template_id)
+            if not record:
+                raise HTTPException(status_code=404, detail="Template not found.")
+            return {
+                "message": f"Template with ID {record['id']} has been deleted.",
+                "name": record["name"],
+                "template": record["template"],
+            }
+        except Exception as e:
+            print(str(e))
+            raise HTTPException(status_code=500, detail=str(e))
