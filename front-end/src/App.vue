@@ -5,7 +5,7 @@
 </template>
 
 <script lang='ts' setup>
-import MessageForm from './components/MessageForm.vue';
+import MessageForm from './views/MessageForm.vue';
 
 const name = "App";
 const components = { MessageForm };
